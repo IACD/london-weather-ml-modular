@@ -1,0 +1,62 @@
+# Data (no versionar datos grandes)
+data/raw/
+data/processed/
+*.csv
+
+# Models (no versionar modelos .pkl)
+models/
+*.pkl
+*.joblib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Outputs temporales (mantenemos imágenes para documentación)
+# Si quieres excluir imágenes, descomenta la siguiente línea:
+# *.png
+
+# MLflow
+mlruns/
+
+# Secrets
+.env
+*.key
+credentials.json
+
+# Notebooks temporales y respaldos
+excersises.ipynb
+excersises3.ipynb
+*copy*.ipynb
+
+# Archivos de prueba
+test_case_*.txt
+pngs/
+
+# Documentos Word
+*.docx
+
+# CSVs intermedios (mantener solo data/processed/)
+london_weather_cleaned.csv
