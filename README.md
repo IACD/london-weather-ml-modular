@@ -1,188 +1,159 @@
-# London Weather Temperature Predictor
+# 🌡️ Predicción de Temperatura - Londres (1979-2020)
 
-> Machine Learning model for daily mean temperature prediction in London (1979-2020)
-
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3.0-orange.svg)](https://scikit-learn.org/)
-[![Status](https://img.shields.io/badge/Status-Production--Ready-green.svg)]()
+Proyecto modular de Machine Learning para predicción de temperatura media diaria usando Random Forest.
 
 ---
 
-## 🎯 Project Overview
+## 📊 Resumen del Proyecto
 
-This project implements a **Random Forest regression model** to predict daily mean temperature in London using meteorological features, achieving:
+### 🎯 Resultados Finales
 
-- **RMSE:** 2.784°C [95% CI: 2.713-2.853°C]
-- **Improvement over baseline:** +24.6% (Seasonal Naive)
-- **No temporal leakage:** Uses only features available before prediction
-
-**Key Deliverables:**
-- ✅ Production-ready model (`models/random_forest_v1.pkl`)
-- ✅ Comprehensive Model Card (`model_card.md`)
-- ✅ Deployment guide (`README_deployment.md`)
-- ✅ Monitoring criteria (`results/monitoring_criteria.csv`)
+**Modelo de Producción:** Random Forest v1 (Modularizado)  
+**RMSE Test:** 2.850°C (IC 95%: 2.775-2.922°C)  
+**MAE Test:** 2.264°C  
+**R² Test:** 0.747
 
 ---
 
-## 📊 Model Performance
+### 🏆 Comparación de Rendimiento de Modelos
 
-### Test Set Metrics (2015-2020, n=3,061 days)
+| Modelo | Versión | RMSE (Test) | MAE (Test) | R² (Test) | Estado |
+|--------|---------|-------------|------------|-----------|--------|
+| **Seasonal Naive** | Baseline | 3.690°C | 2.921°C | 0.576 | Baseline |
+| **Ridge Regression** | v1 (sin leakage) | 3.681°C | 2.733°C | 0.578 | Benchmark |
+| **Random Forest** | v1 (sin leakage) | **2.850°C** | **2.264°C** | **0.747** | **PRODUCCIÓN** ✅ |
+| **XGBoost** | v1 (sin leakage) | 2.950°C | 2.336°C | 0.729 | Benchmark |
+| Ridge Regression | v2 (con leakage) | 0.922°C | 0.701°C | 0.974 | Upper Bound ⚠️ |
+| Random Forest | v2 (con leakage) | 1.060°C | 0.786°C | 0.965 | Upper Bound ⚠️ |
+| XGBoost | v2 (con leakage) | 0.886°C | 0.678°C | 0.976 | Upper Bound ⚠️ |
 
-| Metric | Value | 95% Confidence Interval |
-|--------|-------|------------------------|
-| **RMSE** | **2.784°C** | [2.713, 2.853]°C |
-| **MAE** | **2.208°C** | [2.148, 2.267]°C |
-| **R²** | **0.759** | [0.747, 0.771] |
-
-### Performance by Season
-
-| Season | RMSE (°C) | Status |
-|--------|-----------|--------|
-| Autumn | 2.627 | ✅ Best |
-| Summer | 2.722 | ✅ Good |
-| Spring | 2.883 | ⚠️ Acceptable |
-| Winter | 2.894 | ⚠️ Acceptable |
-
-### Limitations
-
-⚠️ **Extreme temperatures (> 25°C):** RMSE degrades to 6.410°C (only 26 samples)  
-⚠️ **Cold temperatures (< 5°C):** RMSE = 3.701°C (33% worse than average)  
-✅ **Optimal range (5-15°C):** RMSE = 2.472°C (56% of dataset)
+**Mejora sobre Baseline:** 22.8% ↓ RMSE
 
 ---
 
-## 🗂️ Project Structure
+### 🔍 Hallazgos Clave
 
-```
-project/
-├── excersises2.ipynb              # Complete analysis pipeline
-├── data/
-│   ├── raw/                       # Original dataset
-│   └── processed/                 # Processed features
-├── models/                        # Trained models
-│   ├── random_forest_v1.pkl       # Production (RMSE: 2.784°C)
-│   ├── xgboost_v1.pkl             # Benchmark
-│   └── ridge_v1.pkl               # Benchmark
-├── results/                       # Metrics and analysis
-│   ├── final_analysis.csv
-│   ├── bootstrap_results.csv
-│   ├── error_analysis.csv
-│   └── monitoring_criteria.csv
-├── [01-24]_*.png                  # Visualizations
-├── model_card.md
-├── README_deployment.md
-├── requirements.txt
-└── README.md
-```
+1. **Selección de Modelo:** Random Forest v1 supera a XGBoost y Ridge manteniendo cero filtración de datos
+2. **Validación Temporal:** División cronológica estricta (60% train, 20% val, 20% test) previene contaminación con datos futuros
+3. **Importancia de Features:** Variables meteorológicas (presión, radiación, nubosidad) + patrones estacionales impulsan las predicciones
+4. **Rendimiento por Estación:** 
+   - Mejor: Otoño (RMSE: 2.706°C)
+   - Peor: Invierno (RMSE: 3.039°C)
+5. **Limitación:** El modelo se degrada con temperaturas extremas (>25°C: RMSE: 6.727°C) debido a ejemplos limitados en entrenamiento
+6. **Reproducibilidad:** Intervalos de confianza bootstrap confirman estabilidad del modelo (ancho IC: ±0.147°C)
 
 ---
 
-## 🚀 Quick Start
+### ⚖️ Trade-off Ético: Data Leakage vs Rendimiento
 
-### Installation
+**Problema:** Incluir `max_temp` y `min_temp` como features crea **filtración temporal** porque:
+- Estas variables se miden **el mismo día** que el objetivo (`mean_temp`)
+- Tienen correlación >0.95 con el objetivo (≈ hacer trampa)
+- El modelo fallaría en despliegue real (máx/mín futuros son desconocidos)
+
+**Nuestra Decisión:**
+
+| Enfoque | RMSE | Estado | Justificación |
+|---------|------|--------|---------------|
+| **v1 (sin leakage)** | **2.850°C** | ✅ **PRODUCCIÓN** | Reproducible, ético, desplegable |
+| v2 (con leakage) | 1.060°C | ❌ Solo comparación | Cota superior teórica, no utilizable |
+
+**Trade-off:** Aceptar **169% más error** para garantizar **cero filtración de datos** y **prácticas éticas de ML**.
+
+Esto se alinea con principios de IA responsable: **transparencia > rendimiento**.
+
+---
+
+### 🛠️ Stack Técnico
+
+**Lenguajes y Librerías:**
+- Python 3.x con sklearn 1.8.0
+- XGBoost, Pandas, NumPy, Matplotlib, Seaborn
+
+**Arquitectura:**
+- Paquete modular `src/` (6 módulos: __init__, data_processing, feature_engineering, models, evaluation, visualization)
+- Validación cruzada temporal (sin mezcla aleatoria)
+- Intervalos de confianza bootstrap (1000 iteraciones)
+
+**Estrategia de Validación:**
+- Baseline: Seasonal Naive (promedios estacionales históricos)
+- 3 modelos ML con optimización de hiperparámetros
+- Conjunto de validación separado para estimación imparcial del rendimiento
+
+---
+
+### 📁 Archivos Generados
+
+**Modelos:**
+- `models/random_forest_v1_modular.pkl` (modelo de producción, 200 árboles)
+
+**Visualizaciones:**
+- EDA: distribuciones, correlaciones, series temporales
+- División temporal: visualización de splits train/val/test
+- Comparación de modelos: predicciones v2, residuos v2, feature importance
+- Análisis de errores: por estación, por rango de temperatura
+- Bootstrap: intervalos de confianza
+- Resumen final: comparación RMSE de todos los modelos
+
+**Resultados (archivos CSV):**
+- `results/final_analysis.csv` (tabla comparativa de modelos)
+- `results/bootstrap_results.csv` (intervalos de confianza)
+- `data/processed/` (divisiones train/val/test y features)
+
+**Código:**
+- Paquete `src/`: 5 módulos, ~1200 líneas de Python listo para producción
+- Notebook Jupyter: 15 celdas, pipeline completamente reproducible
+- `README.md`: Documentación profesional
+
+---
+
+### 🎓 Declaración de Reproducibilidad
+
+Todos los resultados son **100% reproducibles** con:
+- Semilla aleatoria fija (`random_state=42`)
+- Divisiones de datos deterministas (temporal, sin aleatoriedad)
+- Hiperparámetros documentados
+- Código versionado
+
+**Para reproducir:**
 
 ```bash
-# Clone repository
-git clone <repository_url>
-cd assestment_cientifico_de_datos
+git clone https://github.com/IACD/london-weather-ml-modular.git
+cd london-weather-ml-modular
+pip install -r requirements.txt
+jupyter notebook main_notebook.ipynb
+# Ejecutar: Cell → Run All
+```
 
-# Install dependencies
+---
+
+### 🚀 Uso Rápido
+
+#### Instalación
+
+```bash
+git clone https://github.com/IACD/london-weather-ml-modular.git
+cd london-weather-ml-modular
 pip install -r requirements.txt
 ```
 
-### Usage
-
-#### 1. Load Production Model
-
-```python
-import joblib
-import pandas as pd
-
-# Load trained model
-model = joblib.load('models/random_forest_v1.pkl')
-
-# Feature order (MUST match training)
-FEATURES = [
-    'cloud_cover', 'sunshine', 'global_radiation', 'pressure',
-    'precipitation', 'snow_depth', 'season_winter', 'season_spring',
-    'season_summer', 'day_of_year', 'year_normalized'
-]
-
-# Prepare input
-X_new = pd.DataFrame([[5, 3.2, 120.5, 1013.2, 0.0, 0.0, 0, 1, 0, 90, 0.5]], 
-                     columns=FEATURES)
-
-# Predict
-y_pred = model.predict(X_new)
-print(f"Predicted temperature: {y_pred:.2f}°C")
-```
-
-#### 2. Run Analysis Notebook
+#### Ejecución
 
 ```bash
-jupyter notebook excersises2.ipynb
+jupyter notebook main_notebook.ipynb
+# En el notebook: Cell → Run All
 ```
 
 ---
 
-## 📖 Documentation
+### 📚 Referencias
 
-- **Model Card:** [`model_card.md`](model_card.md)
-- **Deployment Guide:** [`README_deployment.md`](README_deployment.md)
-- **Monitoring:** [`results/monitoring_criteria.csv`](results/monitoring_criteria.csv)
-
----
-
-## 🔬 Technical Highlights
-
-### Rigorous ML Practices
-
-✅ **Temporal validation:** TimeSeriesSplit (5 folds, no random split)  
-✅ **Baseline comparison:** Seasonal Naive (RMSE = 3.690°C)  
-✅ **Confidence intervals:** Bootstrap (1000 iterations, 95% CI)  
-✅ **Leakage detection:** v1 vs v2 documented
-
-### Ethical Trade-off
-
-**Question:** Why not use `max_temp` and `min_temp` features (65% better performance)?
-
-**Answer:** They exhibit **temporal leakage** (same-day measurements).
-
-| Version | RMSE | Status |
-|---------|------|--------|
-| **v1 (production)** | **2.784°C** | ✅ No leakage |
-| v2 (invalid) | 0.966°C | ❌ Temporal leakage |
-
-**Decision:** Accept 188% more error to ensure model integrity.  
-**Documentation:** See `model_card.md` § Ethical Considerations
+- **Dataset:** Datos Meteorológicos de Londres (1979-2020, 15,305 observaciones diarias)
+- **Mejores Prácticas:** Documentación de Scikit-learn, principios MLOps
 
 ---
 
-## 🛠️ Technology Stack
-
-- **Language:** Python 3.8+
-- **ML Framework:** scikit-learn 1.3.0, XGBoost 1.7.6
-- **Data:** pandas 2.0.3, numpy 1.24.3
-- **Visualization:** matplotlib 3.7.2, seaborn 0.12.2
-- **Environment:** Jupyter Notebook
-
----
-
-## 📈 Next Steps
-
-### Production Deployment
-1. Review Model Card (`model_card.md`)
-2. Set up monitoring (`results/monitoring_criteria.csv`)
-3. Deploy using `README_deployment.md`
-
-### Model Maintenance
-- **Retraining:** Every 6 months
-- **Alert threshold:** RMSE > 3.18°C
-- **Critical threshold:** RMSE > 3.48°C
-
----
-
-## 👤 Author
+## 👤 Autor
 
 **Ismael Alejandro Carreño Diaz**  
 Bioinformático | Candidato a Científico de Datos  
@@ -190,14 +161,11 @@ Walmart / Stefanini México
 
 ---
 
-## 🙏 Acknowledgments
+## 📋 Información del Proyecto
 
-- **Dataset:** London Weather (1979-2020)
-- **Methodology:** Model Card framework (Mitchell et al., 2019)
-- **Guidelines:** Data Science Standards
-
----
-
-**Last Updated:** May 24, 2026  
-**Model Version:** 1.0.0  
-**Status:** ✅ Production-Ready
+**Estado del Proyecto:** ✅ **COMPLETO Y LISTO PARA PRODUCCIÓN**  
+**Autor:** Ismael Alejandro Carreño Diaz  
+**Fecha:** Mayo 2026  
+**Contexto:** Walmart/Stefanini - Assessment de Científico de Datos  
+**Versión:** 1.0.0  
+**Última Actualización:** 25 de Mayo, 2026
